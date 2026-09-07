@@ -95,10 +95,11 @@ agent_kind=<kind>`. No compiled binary, no polling, no daemon.
 
 ## Requirements
 
-- Herdr >= 0.8.2 — the version this is developed and tested against. Custom
-  sidebar tokens and `[[startup]]` hooks landed earlier (around 0.7.4-0.7.5),
-  but the release that added the `pane.agent_detected` plugin event is not
-  documented, so the floor is set to what is actually verified.
+- Herdr >= 0.8.2 — verified on **0.8.2 and 0.9.0**, including across an
+  in-place upgrade between them. Custom sidebar tokens and `[[startup]]` hooks
+  landed earlier (around 0.7.4-0.7.5), but the release that added the
+  `pane.agent_detected` plugin event is undocumented, so the floor is set to
+  what is actually verified rather than what is likely.
 - `python3`
 - macOS or Linux
 
