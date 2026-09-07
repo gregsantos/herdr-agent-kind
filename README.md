@@ -59,6 +59,13 @@ rows = [
 
 Drop the `agent` token if you'd rather show only the session name and the kind.
 
+### First run
+
+The plugin publishes when an agent is *detected*, so a fresh install does not
+retrofit itself onto agents that are already running. After installing, either
+restart the Herdr server or start a new agent — otherwise `$agent_kind` stays
+empty for existing panes and the plugin looks like it is doing nothing.
+
 Two things to know while editing rows:
 
 - **Row 1 should lead with `state_icon`.** Row 1 renders flush left while later
@@ -105,6 +112,10 @@ Each run then logs the event, its payload, and every publish outcome to
 herdr plugin list --plugin gregsantos.agent-kind
 herdr pane get <pane_id>          # look for "tokens": {"agent_kind": "..."}
 ```
+
+If `tokens` is missing on a pane whose agent was already running at install
+time, that is the first-run behaviour above, not a fault — restart the server
+or start a new agent.
 
 ## Limitations
 
