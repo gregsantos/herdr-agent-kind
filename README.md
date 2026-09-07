@@ -127,9 +127,16 @@ herdr plugin log list --plugin gregsantos.agent-kind
 The plugin log is the most useful of the three: Herdr records `exit_code`,
 `stdout` and `stderr` for every hook invocation, so a failing run says why.
 
-If `tokens` is missing on a pane whose agent was already running at install
-time, that is the first-run behaviour above, not a fault — restart the server
-or start a new agent.
+Two symptoms that look like plugin faults but are not:
+
+- **The sidebar is unchanged, still showing your previous layout.** Herdr reads
+  `config.toml` at startup and on `herdr server reload-config`; editing the file
+  alone changes nothing. This bites hardest when the config arrives from
+  elsewhere — a dotfiles sync onto a second machine — because then there is no
+  moment where you would think to reload. Run `herdr server reload-config`.
+- **The row renders but the kind is absent**, meaning the layout is live and the
+  token is empty. The agent in that pane was already running when the plugin was
+  installed; see First run, and run the `refresh` action.
 
 ## Uninstall
 
