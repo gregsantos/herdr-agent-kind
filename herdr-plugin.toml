@@ -1,0 +1,16 @@
+id = "gregsantos.agent-kind"
+name = "Agent Kind"
+version = "0.1.0"
+min_herdr_version = "0.7.5"
+description = "Publishes each pane's detected agent kind (claude, codex, ...) as a $kind sidebar token"
+platforms = ["macos", "linux"]
+
+# Republish for every pane when the plugin starts. Pane metadata is runtime-only
+# and does not survive a server restart, so startup is what restores the tokens.
+[[startup]]
+command = ["sh", "-c", "${HERDR_PLUGIN_ROOT}/publish-kind.sh"]
+
+# Fires whenever Herdr detects an agent in a pane, including on restore.
+[[events]]
+on = "pane.agent_detected"
+command = ["sh", "-c", "${HERDR_PLUGIN_ROOT}/publish-kind.sh"]
