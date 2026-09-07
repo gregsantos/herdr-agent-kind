@@ -120,7 +120,7 @@ Each run then logs the event, its payload, and every publish outcome to
 
 ```sh
 herdr plugin list --plugin gregsantos.agent-kind
-herdr pane get <pane_id>          # look for "tokens": {"agent_kind": "..."}
+herdr pane get w1:p2              # look for "tokens": {"agent_kind": "..."}
 herdr plugin log list --plugin gregsantos.agent-kind
 ```
 
@@ -152,7 +152,7 @@ Panes keep their last published `agent_kind` value until the Herdr server next
 restarts, since pane metadata is runtime-only. To clear it immediately:
 
 ```sh
-herdr pane report-metadata <pane_id> --source agent-kind --clear-token agent_kind
+herdr pane report-metadata w1:p2 --source agent-kind --clear-token agent_kind
 ```
 
 ## Limitations
