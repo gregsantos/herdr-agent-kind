@@ -54,19 +54,40 @@ Both paths shell out to `herdr pane report-metadata <pane> --source agent-kind
 
 ## Requirements
 
-Herdr >= 0.7.5 (custom sidebar tokens and `[[startup]]`), `python3` for JSON
-parsing, macOS or Linux.
+- Herdr >= 0.7.5 — the version that introduced custom sidebar tokens,
+  `pane report-metadata`, and `[[startup]]` hooks. Developed and tested against
+  **0.8.2**; compatibility with releases older than that is untested.
+- `python3` for JSON parsing.
+- macOS or Linux.
 
 ## Troubleshooting
 
-Each invocation appends to `$HERDR_PLUGIN_STATE_DIR/events.log` (capped at 50
-lines) with the event name and raw payload.
+Diagnostics are off by default, because this runs on every agent detection and
+an always-on log means constant file churn for a case that only matters when
+something is broken. Enable it per machine:
+
+```sh
+touch "$(herdr plugin config-dir gregsantos.agent-kind)/debug"
+# or, for a one-off:  HERDR_AGENT_KIND_DEBUG=1
+```
+
+Each invocation then appends the event name, raw payload, and the outcome of
+every publish to `$HERDR_PLUGIN_STATE_DIR/agent-kind.log`.
 
 ```sh
 herdr plugin list --plugin gregsantos.agent-kind
 herdr plugin log list --plugin gregsantos.agent-kind
 herdr pane get <pane_id>   # look for "tokens": {"kind": "..."}
 ```
+
+## Known limitations
+
+- If an agent exits and its pane becomes a plain shell, the pane keeps a stale
+  `kind` token. Harmless in practice: the agents sidebar only lists panes that
+  currently host an agent, so a stale token on a shell pane is never rendered.
+- Publish failures are swallowed rather than failing the hook, since a non-zero
+  plugin exit is noise the user cannot act on mid-session. Enable diagnostics to
+  see them.
 
 ## License
 
