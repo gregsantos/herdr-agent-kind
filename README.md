@@ -61,8 +61,10 @@ kind=<kind>`. No compiled binary, no polling, no daemon.
 
 ## Requirements
 
-- Herdr >= 0.7.5, when custom sidebar tokens, `pane report-metadata` and
-  `[[startup]]` landed. Tested against **0.8.2**; older releases are untested.
+- Herdr >= 0.8.2 — the version this is developed and tested against. Custom
+  sidebar tokens and `[[startup]]` hooks landed earlier (around 0.7.4-0.7.5),
+  but the release that added the `pane.agent_detected` plugin event is not
+  documented, so the floor is set to what is actually verified.
 - `python3`
 - macOS or Linux
 
