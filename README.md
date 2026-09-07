@@ -102,6 +102,8 @@ agent_kind=<kind>`. No compiled binary, no polling, no daemon.
   what is actually verified rather than what is likely.
 - `python3`, for parsing Herdr's JSON output. If it is missing the plugin
   exits non-zero with a message rather than silently publishing nothing.
+- Any POSIX shell — `/bin/sh`. No bash required; verified under dash, bash,
+  zsh and macOS `/bin/sh`.
 - macOS or Linux
 
 ## Troubleshooting

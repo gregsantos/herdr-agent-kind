@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Publishes each pane's detected agent kind as the $agent_kind sidebar token.
 #
 # Herdr's built-in `agent` token renders the Herdr agent name whenever one is
@@ -8,32 +8,36 @@
 #
 # Pane metadata is runtime-only and is not written to session.json, so the
 # [[startup]] hook is what restores tokens after a Herdr server restart.
-set -euo pipefail
+#
+# POSIX sh on purpose: Herdr runs on Linux too, where bash is not guaranteed.
+# A bash shebang fails before any check inside this script can report why.
+set -eu
 
 herdr_binary="${HERDR_BIN_PATH:-herdr}"
 metadata_source="agent-kind"
 
 # Diagnostics are opt-in: this runs on every agent detection, and an always-on
-# log would mean constant file churn (and a read-rewrite race between
-# concurrent detections) to serve a case that only matters when debugging.
+# log would mean constant file churn to serve a case that only matters when
+# debugging.
 #   touch "$HERDR_PLUGIN_CONFIG_DIR/debug"   # or export HERDR_AGENT_KIND_DEBUG=1
 debug_log="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}/agent-kind.log"
 debug_enabled=false
-if [ "${HERDR_AGENT_KIND_DEBUG:-}" = "1" ] ||
-    { [ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ] && [ -e "${HERDR_PLUGIN_CONFIG_DIR}/debug" ]; }; then
+if [ "${HERDR_AGENT_KIND_DEBUG:-}" = "1" ]; then
+    debug_enabled=true
+elif [ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ] && [ -e "${HERDR_PLUGIN_CONFIG_DIR}/debug" ]; then
     debug_enabled=true
 fi
 
 log_debug() {
     [ "$debug_enabled" = true ] || return 0
     mkdir -p "$(dirname "$debug_log")" 2>/dev/null || return 0
-    printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" >>"$debug_log" 2>/dev/null || true
+    printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >>"$debug_log" 2>/dev/null || true
 }
 
-# Parsing Herdr's JSON is the only thing this needs beyond coreutils. Fail
-# loudly rather than exiting 0: without python3 every publish quietly does
-# nothing, which in the plugin log is indistinguishable from "no agents to
-# report". Unlike a failed publish, this is permanent and the user can fix it.
+# Parsing Herdr's JSON is the only thing this needs beyond a shell. Fail loudly
+# rather than exiting 0: without python3 every publish quietly does nothing,
+# which in the plugin log is indistinguishable from "no agents to report".
+# Unlike a failed publish, this is permanent and the user can fix it.
 if ! command -v python3 >/dev/null 2>&1; then
     echo "herdr-agent-kind: python3 not found in PATH; cannot parse Herdr's JSON output" >&2
     log_debug "python3 not found in PATH"
@@ -41,15 +45,14 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 publish_kind() {
-    local pane_id="$1" agent_kind="$2"
-    [ -n "$pane_id" ] && [ -n "$agent_kind" ] || return 0
-    if "$herdr_binary" pane report-metadata "$pane_id" \
-        --source "$metadata_source" --token "agent_kind=$agent_kind" >/dev/null 2>&1; then
-        log_debug "published pane=$pane_id kind=$agent_kind"
+    [ -n "${1:-}" ] && [ -n "${2:-}" ] || return 0
+    if "$herdr_binary" pane report-metadata "$1" \
+        --source "$metadata_source" --token "agent_kind=$2" >/dev/null 2>&1; then
+        log_debug "published pane=$1 kind=$2"
     else
-        # Never fail the hook: a plugin that exits non-zero is noise in Herdr's
-        # log for something the user cannot act on mid-session.
-        log_debug "FAILED pane=$pane_id kind=$agent_kind"
+        # Never fail the hook for this: a publish can fail for reasons the user
+        # cannot act on mid-session.
+        log_debug "FAILED pane=$1 kind=$2"
     fi
 }
 
@@ -106,10 +109,9 @@ if found:
 }
 
 publish_all_detected() {
-    local pane_id agent_kind
-    while read -r pane_id agent_kind; do
+    all_detected_agents | while read -r pane_id agent_kind; do
         publish_kind "$pane_id" "$agent_kind"
-    done < <(all_detected_agents)
+    done
 }
 
 log_debug "event=${HERDR_PLUGIN_EVENT:-?} json=${HERDR_PLUGIN_EVENT_JSON:-}"
@@ -121,12 +123,12 @@ if [ "${HERDR_PLUGIN_EVENT:-}" = "startup" ] || [ -n "${HERDR_PLUGIN_ACTION_ID:-
     exit 0
 fi
 
-event_pane_id=""
-event_agent_kind=""
-read -r event_pane_id event_agent_kind < <(event_pane) || true
-
-if [ -n "$event_pane_id" ]; then
-    publish_kind "$event_pane_id" "$event_agent_kind"
+event_output="$(event_pane || true)"
+if [ -n "$event_output" ]; then
+    # Word-splitting "pane_id kind" is intended here.
+    # shellcheck disable=SC2086
+    set -- $event_output
+    publish_kind "${1:-}" "${2:-}"
 else
     # Fall back to a full sweep if the event payload was not shaped as expected.
     log_debug "no pane in event payload; sweeping all detected agents"
