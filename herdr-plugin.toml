@@ -1,6 +1,6 @@
 id = "gregsantos.agent-kind"
 name = "Agent Kind"
-version = "0.3.0"
+version = "0.4.0"
 min_herdr_version = "0.8.2"
 description = "Publishes each pane's detected agent kind (claude, codex, ...) as a $agent_kind sidebar token"
 platforms = ["macos", "linux"]
@@ -13,4 +13,13 @@ command = ["sh", "-c", "${HERDR_PLUGIN_ROOT}/publish-kind.sh"]
 # Fires whenever Herdr detects an agent in a pane, including on restore.
 [[events]]
 on = "pane.agent_detected"
+command = ["sh", "-c", "${HERDR_PLUGIN_ROOT}/publish-kind.sh"]
+
+# Republish for every pane on demand. Pane metadata is runtime-only, so a fresh
+# install does not retrofit tokens onto agents that are already running; this
+# fills them in without restarting the Herdr server.
+[[actions]]
+id = "refresh"
+title = "Refresh agent kind tokens"
+contexts = ["global"]
 command = ["sh", "-c", "${HERDR_PLUGIN_ROOT}/publish-kind.sh"]

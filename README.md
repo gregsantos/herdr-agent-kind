@@ -62,9 +62,15 @@ Drop the `agent` token if you'd rather show only the session name and the kind.
 ### First run
 
 The plugin publishes when an agent is *detected*, so a fresh install does not
-retrofit itself onto agents that are already running. After installing, either
-restart the Herdr server or start a new agent — otherwise `$agent_kind` stays
-empty for existing panes and the plugin looks like it is doing nothing.
+retrofit itself onto agents that are already running — `$agent_kind` stays empty
+for existing panes until something triggers a publish. Fill them in without
+restarting anything:
+
+```sh
+herdr plugin action invoke gregsantos.agent-kind.refresh
+```
+
+Starting a new agent or restarting the Herdr server has the same effect.
 
 Two things to know while editing rows:
 
@@ -116,6 +122,23 @@ herdr pane get <pane_id>          # look for "tokens": {"agent_kind": "..."}
 If `tokens` is missing on a pane whose agent was already running at install
 time, that is the first-run behaviour above, not a fault — restart the server
 or start a new agent.
+
+## Uninstall
+
+```sh
+herdr plugin uninstall gregsantos.agent-kind
+```
+
+Then remove `$agent_kind` from your rows in `~/.config/herdr/config.toml` and run
+`herdr server reload-config`. A token left in the config after uninstalling is
+harmless — it simply renders as nothing.
+
+Panes keep their last published `agent_kind` value until the Herdr server next
+restarts, since pane metadata is runtime-only. To clear it immediately:
+
+```sh
+herdr pane report-metadata <pane_id> --source agent-kind --clear-token agent_kind
+```
 
 ## Limitations
 

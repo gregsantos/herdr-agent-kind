@@ -104,7 +104,9 @@ publish_all_detected() {
 
 log_debug "event=${HERDR_PLUGIN_EVENT:-?} json=${HERDR_PLUGIN_EVENT_JSON:-}"
 
-if [ "${HERDR_PLUGIN_EVENT:-}" = "startup" ]; then
+# Startup and the `refresh` action both mean "reconcile everything": neither
+# carries a single pane to act on.
+if [ "${HERDR_PLUGIN_EVENT:-}" = "startup" ] || [ -n "${HERDR_PLUGIN_ACTION_ID:-}" ]; then
     publish_all_detected
     exit 0
 fi
