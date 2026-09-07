@@ -100,7 +100,8 @@ agent_kind=<kind>`. No compiled binary, no polling, no daemon.
   landed earlier (around 0.7.4-0.7.5), but the release that added the
   `pane.agent_detected` plugin event is undocumented, so the floor is set to
   what is actually verified rather than what is likely.
-- `python3`
+- `python3`, for parsing Herdr's JSON output. If it is missing the plugin
+  exits non-zero with a message rather than silently publishing nothing.
 - macOS or Linux
 
 ## Troubleshooting
@@ -118,7 +119,11 @@ Each run then logs the event, its payload, and every publish outcome to
 ```sh
 herdr plugin list --plugin gregsantos.agent-kind
 herdr pane get <pane_id>          # look for "tokens": {"agent_kind": "..."}
+herdr plugin log list --plugin gregsantos.agent-kind
 ```
+
+The plugin log is the most useful of the three: Herdr records `exit_code`,
+`stdout` and `stderr` for every hook invocation, so a failing run says why.
 
 If `tokens` is missing on a pane whose agent was already running at install
 time, that is the first-run behaviour above, not a fault — restart the server

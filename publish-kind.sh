@@ -30,6 +30,16 @@ log_debug() {
     printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" >>"$debug_log" 2>/dev/null || true
 }
 
+# Parsing Herdr's JSON is the only thing this needs beyond coreutils. Fail
+# loudly rather than exiting 0: without python3 every publish quietly does
+# nothing, which in the plugin log is indistinguishable from "no agents to
+# report". Unlike a failed publish, this is permanent and the user can fix it.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "herdr-agent-kind: python3 not found in PATH; cannot parse Herdr's JSON output" >&2
+    log_debug "python3 not found in PATH"
+    exit 1
+fi
+
 publish_kind() {
     local pane_id="$1" agent_kind="$2"
     [ -n "$pane_id" ] && [ -n "$agent_kind" ] || return 0

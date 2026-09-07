@@ -1,6 +1,6 @@
 id = "gregsantos.agent-kind"
 name = "Agent Kind"
-version = "0.4.0"
+version = "0.4.1"
 min_herdr_version = "0.8.2"
 description = "Publishes each pane's detected agent kind (claude, codex, ...) as a $agent_kind sidebar token"
 platforms = ["macos", "linux"]
