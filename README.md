@@ -32,8 +32,19 @@ herdr plugin install gregsantos/herdr-agent-kind
 ```
 
 **Installing alone changes nothing.** The plugin only publishes the value; your
-config decides whether it is shown. Add `$agent_kind` to your agent rows,
-alongside `agent` for the name:
+config decides whether it is rendered.
+
+Edit `~/.config/herdr/config.toml` and add `$agent_kind` to the agent rows under
+`[ui.sidebar.agents]`. Note that `rows` **replaces** the layout entirely rather
+than adding to it, so start from what you already have. Against Herdr's default:
+
+```toml
+[ui.sidebar.agents]
+# default:  rows = [["state_icon", "workspace", "tab"], ["agent"]]
+rows = [["state_icon", "workspace", "tab"], ["agent", "$agent_kind"]]
+```
+
+A fuller layout, showing the session name, the agent name and the kind together:
 
 ```toml
 [ui.sidebar.agents]
@@ -47,7 +58,14 @@ rows = [
 ```
 
 Drop the `agent` token if you'd rather show only the session name and the kind.
-Herdr picks the change up on `herdr server reload-config`.
+
+Two things to know while editing rows:
+
+- **Row 1 should lead with `state_icon`.** Row 1 renders flush left while later
+  rows indent past the icon gutter, so a first row that starts with anything
+  else leaves the remaining rows hanging.
+- Run `herdr server reload-config` to apply. It reports invalid tokens in its
+  `diagnostics` array, so an empty array means the rows parsed cleanly.
 
 ## How it works
 
