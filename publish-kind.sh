@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publishes each pane's detected agent kind as the $kind sidebar token.
+# Publishes each pane's detected agent kind as the $agent_kind sidebar token.
 #
 # Herdr's built-in `agent` token renders the Herdr agent name whenever one is
 # set and falls back to the kind only when none is, so a named agent hides
@@ -34,7 +34,7 @@ publish_kind() {
     local pane_id="$1" agent_kind="$2"
     [ -n "$pane_id" ] && [ -n "$agent_kind" ] || return 0
     if "$herdr_binary" pane report-metadata "$pane_id" \
-        --source "$metadata_source" --token "kind=$agent_kind" >/dev/null 2>&1; then
+        --source "$metadata_source" --token "agent_kind=$agent_kind" >/dev/null 2>&1; then
         log_debug "published pane=$pane_id kind=$agent_kind"
     else
         # Never fail the hook: a plugin that exits non-zero is noise in Herdr's

@@ -1,8 +1,8 @@
 id = "gregsantos.agent-kind"
 name = "Agent Kind"
-version = "0.2.1"
+version = "0.3.0"
 min_herdr_version = "0.8.2"
-description = "Publishes each pane's detected agent kind (claude, codex, ...) as a $kind sidebar token"
+description = "Publishes each pane's detected agent kind (claude, codex, ...) as a $agent_kind sidebar token"
 platforms = ["macos", "linux"]
 
 # Republish for every pane when the plugin starts. Pane metadata is runtime-only
