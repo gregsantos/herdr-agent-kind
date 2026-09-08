@@ -80,6 +80,57 @@ Two things to know while editing rows:
 - Run `herdr server reload-config` to apply. It reports invalid tokens in its
   `diagnostics` array, so an empty array means the rows parsed cleanly.
 
+## Update
+
+There is no `herdr plugin update` in plugin v1. Reinstalling from GitHub
+refreshes the managed checkout in place:
+
+```sh
+herdr plugin install gregsantos/herdr-agent-kind
+```
+
+That is the whole procedure. You do **not** need to uninstall first — the
+install reports what it replaces — and you do **not** need `herdr plugin link`,
+which is for developing against a local working tree, not for updating.
+
+Reinstalling leaves your setup alone:
+
+- `~/.config/herdr/config.toml` is untouched, so your `rows` stay as they are.
+- The plugin's own config and state directories survive, including the `debug`
+  marker if you enabled diagnostics.
+- Already-published `$agent_kind` tokens stay live, so the sidebar does not
+  blink and you do not need to re-run anything.
+
+To see what you have installed, and at which commit:
+
+```sh
+herdr plugin list --plugin gregsantos.agent-kind
+```
+
+To pin a revision instead of following the default branch:
+
+```sh
+herdr plugin install gregsantos/herdr-agent-kind --ref v0.5.1
+```
+
+Two cases where an update needs one more step, both flagged in
+[CHANGELOG.md](CHANGELOG.md):
+
+- **A release changes what gets published.** `[[startup]]` hooks only run when
+  Herdr restores a session, so they do not re-run on reinstall. Reconcile every
+  pane without restarting the server:
+
+  ```sh
+  herdr plugin action invoke gregsantos.agent-kind.refresh
+  ```
+
+- **A release renames the token.** That is breaking: update `rows` in
+  `~/.config/herdr/config.toml`, then run `herdr server reload-config`.
+
+If you linked a local checkout for development, `plugin install` is refused
+until you `herdr plugin unlink gregsantos.agent-kind` first. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## How it works
 
 Pane metadata in Herdr is runtime-only — it is never written to `session.json`,
