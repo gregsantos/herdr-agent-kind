@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck if the runner image lacks it
+        run: |
+          shellcheck --version \
+            || { sudo apt-get update && sudo apt-get install -y shellcheck; }
+
+      # -s sh, not the shebang default: the plugin targets POSIX sh because
+      # Herdr runs on Linux, where bash is not guaranteed.
+      - name: shellcheck
+        run: shellcheck -s sh publish-kind.sh tests/run.sh tests/mock-herdr.sh
+
+      - name: Manifest parses as TOML
+        run: |
+          python3 -c 'import pathlib, tomllib; tomllib.loads(pathlib.Path("herdr-plugin.toml").read_text())'
+
+      - name: Hook commands are executable
+        run: test -x publish-kind.sh && test -x tests/run.sh
+
+  test:
+    # One job per shell that could plausibly execute the script, on both
+    # platforms the manifest declares. zsh is the interesting one: it does not
+    # word-split unquoted expansions, which has already silently broken a
+    # publish path once.
+    name: test (${{ matrix.os }}, ${{ matrix.shell }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            shell: /bin/sh
+          - os: ubuntu-latest
+            shell: /bin/dash
+          - os: ubuntu-latest
+            shell: /bin/bash
+          - os: macos-latest
+            shell: /bin/sh
+          - os: macos-latest
+            shell: /bin/bash
+          - os: macos-latest
+            shell: /bin/zsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the suite
+        run: ./tests/run.sh
+        env:
+          TEST_SHELL: ${{ matrix.shell }}
