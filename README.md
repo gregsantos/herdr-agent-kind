@@ -40,9 +40,14 @@ than adding to it, so start from what you already have. Against Herdr's default:
 
 ```toml
 [ui.sidebar.agents]
-# default:  rows = [["state_icon", "workspace", "tab"], ["agent"]]
-rows = [["state_icon", "workspace", "tab"], ["agent", "$agent_kind"]]
+# 0.9.0 default:  rows = [["state_icon", "machine", "workspace", "tab"], ["agent"]]
+# 0.8.2 default:  rows = [["state_icon", "workspace", "tab"], ["agent"]]
+rows = [["state_icon", "machine", "workspace", "tab"], ["agent", "$agent_kind"]]
 ```
+
+The default gained a `machine` token in 0.9.0, so check yours rather than
+copying either line blindly — `rows` replaces the layout, and dropping a token
+you had is easy to do by accident.
 
 A fuller layout, showing the session name, the agent name and the kind together:
 
@@ -58,6 +63,32 @@ rows = [
 ```
 
 Drop the `agent` token if you'd rather show only the session name and the kind.
+
+### Colour each kind differently
+
+Text-valued tokens accept up to 16 ordered `rules`, so the kind can carry its
+own colour instead of being one more dim word. Each rule takes exactly one
+condition — `equals`, `contains`, `starts_with`, `gt` or `lt` — plus optional
+`fg`, `bold` and `dim`. The first match wins, and unspecified fields inherit
+the token's own style:
+
+```toml
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", "state_text", { token = "$agent_kind", dim = true, rules = [
+    { equals = "claude", fg = "#fab387", dim = false },
+    { equals = "codex", fg = "#74c7ec", dim = false },
+  ] }],
+  [{ token = "terminal_title_stripped", bold = true }],
+  [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
+]
+```
+
+Kinds you did not name keep the token's default style, so a pane running
+something else stays dim rather than borrowing a colour that means "claude".
+Match values against Herdr's canonical ids, which are lowercase and which
+`herdr server agent-manifests` will list — `claude`, `codex`, `gemini`, `pi`,
+`copilot` and so on. `equals` is case-sensitive.
 
 ### First run
 
