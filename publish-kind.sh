@@ -123,12 +123,16 @@ if [ "${HERDR_PLUGIN_EVENT:-}" = "startup" ] || [ -n "${HERDR_PLUGIN_ACTION_ID:-
     exit 0
 fi
 
+# Split "pane_id kind" with parameter expansion rather than word splitting: zsh
+# does not word-split unquoted expansions, so `set -- $event_output` would pass
+# the whole line as the pane id there and silently publish nothing. With no
+# space to split on, pane_id comes back equal to the whole line.
 event_output="$(event_pane || true)"
-if [ -n "$event_output" ]; then
-    # Word-splitting "pane_id kind" is intended here.
-    # shellcheck disable=SC2086
-    set -- $event_output
-    publish_kind "${1:-}" "${2:-}"
+event_pane_id="${event_output%% *}"
+event_agent_kind="${event_output#* }"
+
+if [ -n "$event_output" ] && [ "$event_pane_id" != "$event_output" ]; then
+    publish_kind "$event_pane_id" "$event_agent_kind"
 else
     # Fall back to a full sweep if the event payload was not shaped as expected.
     log_debug "no pane in event payload; sweeping all detected agents"
