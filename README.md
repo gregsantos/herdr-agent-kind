@@ -6,11 +6,12 @@ sidebar, even after you have named your agents.
 <img src="docs/sidebar.png" width="420" alt="Herdr agents sidebar with four rows. Each row shows a state such as blocked, done, working or idle, then the agent kind in colour: claude in orange, codex in blue. Below that the agent name: reviewer, orchestrator, docs-writer, test-runner. Below that the workspace and tab.">
 
 Herdr's built-in `agent` token shows an agent's name when it has one and its
-kind only when it does not, so the moment you name your agents the kind
-disappears. This plugin publishes the kind as a separate `$agent_kind` token,
-so a row can show both. It decides only what the token contains; colour,
-weight and placement stay in your Herdr config. If you never name agents you
-do not need it.
+kind only when it does not. Every agent started through `herdr agent start`
+has a name, and so does every session you show by title, so in practice the
+kind is what disappears. This plugin publishes it as a separate `$agent_kind`
+token, so a row can show both. It decides only what the token contains;
+colour, weight and placement stay in your Herdr config. If your rows never
+show a name, the `agent` token already shows the kind and you do not need this.
 
 ## Install and set up
 
@@ -24,8 +25,11 @@ of it in two minutes.
 
 Installing alone changes nothing on screen. The plugin publishes the value and
 your sidebar rows decide whether it renders. This is the config behind the
-screenshot; replace your `[ui.sidebar.agents]` section with it, since `rows`
-replaces the layout rather than adding to it. The `rules` need Herdr 0.9.0.
+screenshot. Herdr does not merge `rows` with its default: whatever you write is
+the whole layout, so a row containing only `$agent_kind` would show only the
+kind. Either paste this block whole in place of any `[ui.sidebar.agents]`
+section you have, or add the token to the rows you already use, which the next
+section covers. The `rules` need Herdr 0.9.0.
 
 <a id="the-complete-layout"></a>
 
