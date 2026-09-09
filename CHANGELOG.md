@@ -8,7 +8,7 @@ Because the plugin's whole job is to publish one sidebar token, entries record
 *why* a change was made — the token's shape and the failure policy are the parts
 that affect anyone's config.
 
-## [Unreleased]
+## [0.5.2] - 2026-09-09
 
 ### Fixed
 
@@ -141,7 +141,7 @@ that affect anyone's config.
   on `[[startup]]` and on `pane.agent_detected`, so a named agent no longer
   hides whether it is claude or codex.
 
-[Unreleased]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.1...HEAD
+[0.5.2]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.4.0...v0.4.1

@@ -146,7 +146,7 @@ herdr plugin list --plugin gregsantos.agent-kind
 To pin a revision instead of following the default branch:
 
 ```sh
-herdr plugin install gregsantos/herdr-agent-kind --ref v0.5.1
+herdr plugin install gregsantos/herdr-agent-kind --ref v0.5.2
 ```
 
 Two cases where an update needs one more step, both flagged in
