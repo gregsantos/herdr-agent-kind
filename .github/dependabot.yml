@@ -1,0 +1,8 @@
+# The only dependency this repository declares is the checkout action in CI,
+# pinned to a commit. This keeps that pin current.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

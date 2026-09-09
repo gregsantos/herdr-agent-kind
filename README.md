@@ -31,6 +31,11 @@ If you never name agents, you don't need this: `agent` already shows the kind.
 herdr plugin install gregsantos/herdr-agent-kind
 ```
 
+A Herdr plugin runs as your user with no sandbox, so it is worth knowing what
+one touches before confirming the install. For this plugin that is two Herdr
+commands, `python3`, and one opt-in log file — [SECURITY.md](SECURITY.md) lists
+all of it and takes two minutes to read.
+
 **Installing alone changes nothing.** The plugin only publishes the value; your
 config decides whether it is rendered.
 
@@ -202,8 +207,10 @@ touch "$(herdr plugin config-dir gregsantos.agent-kind)/debug"
 ```
 
 Each run then logs the event, its payload, and every publish outcome to
-`$HERDR_PLUGIN_STATE_DIR/agent-kind.log`. For a one-off, set
-`HERDR_AGENT_KIND_DEBUG=1` instead.
+`$HERDR_PLUGIN_STATE_DIR/agent-kind.log`, readable only by you. For a one-off,
+set `HERDR_AGENT_KIND_DEBUG=1` instead. The log goes only to the state
+directory Herdr provides, so running the script by hand outside Herdr never
+writes one.
 
 ```sh
 herdr plugin list --plugin gregsantos.agent-kind
