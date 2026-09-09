@@ -81,7 +81,11 @@ macOS.
   permanent, the user can fix it, and exiting 0 would be indistinguishable from
   "no agents to report".
 - **`min_herdr_version` tracks what was actually verified**, not what is likely
-  to work. Do not lower it based on when a feature probably landed.
+  to work. Custom sidebar tokens and `[[startup]]` hooks landed around
+  0.7.4-0.7.5, but the release that added the `pane.agent_detected` plugin
+  event is undocumented, so the floor is 0.8.2, the oldest version the plugin
+  has been run against, including across an in-place upgrade to 0.9.0. Do not
+  lower it based on when a feature probably landed.
 
 ## Submitting a change
 
