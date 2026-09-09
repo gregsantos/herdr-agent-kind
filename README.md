@@ -3,17 +3,12 @@
 A [Herdr](https://herdr.dev) plugin that publishes each pane's agent kind as an
 `$agent_kind` sidebar token, so you can show an agent's name *and* what it is.
 
-Each agent below shows its session title, its Herdr agent name and, from this
-plugin, its kind:
+<img src="docs/sidebar.png" width="420" alt="Herdr agents sidebar with four rows. Each row shows a state such as blocked, done, working or idle, then the agent kind in colour: claude in orange, codex in blue. Below that the agent name: reviewer, orchestrator, docs-writer, test-runner. Below that the workspace and tab.">
 
-```text
- ○ idle
-   reviewing auth · reviewer · claude
-   myrepo · api-work
- ◑ working
-   porting tests · migrator · codex
-   myrepo · api-work
-```
+Each row shows the state, then the kind from this plugin in its own colour, then
+the agent's name, then the workspace and tab. The layout is the one under
+[Colour each kind differently](#colour-each-kind-differently), plus the Codex
+override under [Agents without a session name](#agents-without-a-session-name).
 
 ## Why
 
@@ -133,6 +128,30 @@ something else stays dim rather than borrowing a colour that means "claude".
 Match values against Herdr's canonical ids, which are lowercase and which
 `herdr server agent-manifests` will list — `claude`, `codex`, `gemini`, `pi`,
 `copilot` and so on. `equals` is case-sensitive.
+
+### Agents without a session name
+
+The layouts above show `terminal_title_stripped`, which is the agent's own
+terminal title. Claude sets it to the session name you pass with `claude -n`,
+so a Claude row reads as a role. Codex has no such flag and titles its terminal
+after the working directory, so a Codex agent you named `test-runner` with
+`herdr agent start` still shows the folder name.
+
+Herdr's `rows_by_agent` table replaces the rows for one kind. Show the Herdr
+agent handle for Codex and leave the other kinds alone:
+
+```toml
+[ui.sidebar.agents.rows_by_agent]
+codex = [
+  ["state_icon", "state_text", { token = "$agent_kind", fg = "#74c7ec" }],
+  [{ token = "agent", fg = "#89b4fa", bold = true }],
+  [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
+]
+```
+
+The first and third rows repeat the default so the list stays uniform; only the
+middle row differs. Verified on Herdr 0.9.0. Run `herdr server reload-config`
+after adding it, as with any rows change.
 
 ## Update
 
