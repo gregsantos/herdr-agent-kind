@@ -6,9 +6,8 @@ A [Herdr](https://herdr.dev) plugin that publishes each pane's agent kind as an
 <img src="docs/sidebar.png" width="420" alt="Herdr agents sidebar with four rows. Each row shows a state such as blocked, done, working or idle, then the agent kind in colour: claude in orange, codex in blue. Below that the agent name: reviewer, orchestrator, docs-writer, test-runner. Below that the workspace and tab.">
 
 Each row shows the state, then the kind from this plugin in its own colour, then
-the agent's name, then the workspace and tab. The layout is the one under
-[Colour each kind differently](#colour-each-kind-differently), plus the Codex
-override under [Agents without a session name](#agents-without-a-session-name).
+the agent's name, then the workspace and tab. The exact config that produced it
+is under [The complete layout](#the-complete-layout).
 
 ## Why
 
@@ -152,6 +151,46 @@ codex = [
 The first and third rows repeat the default so the list stays uniform; only the
 middle row differs. Verified on Herdr 0.9.0. Run `herdr server reload-config`
 after adding it, as with any rows change.
+
+### The complete layout
+
+Everything above in one block, which is the config behind the screenshot at the
+top. It needs Herdr 0.9.0 for the `rules`. Replace your existing
+`[ui.sidebar.agents]` section with it, since `rows` replaces the layout rather
+than adding to it:
+
+```toml
+[ui.sidebar.agents]
+rows = [
+  # Row 1 leads with state_icon: it renders flush left while later rows indent
+  # past the icon gutter. Kinds without a rule stay dim.
+  ["state_icon", "state_text", { token = "$agent_kind", dim = true, rules = [
+    { equals = "claude", fg = "#fab387", dim = false },
+    { equals = "codex", fg = "#74c7ec", dim = false },
+  ] }],
+  [{ token = "terminal_title_stripped", fg = "#89b4fa", bold = true }],
+  [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
+]
+
+# Codex titles its terminal after the working directory, so show its Herdr
+# agent handle in the middle row instead.
+[ui.sidebar.agents.rows_by_agent]
+codex = [
+  ["state_icon", "state_text", { token = "$agent_kind", fg = "#74c7ec" }],
+  [{ token = "agent", fg = "#89b4fa", bold = true }],
+  [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
+]
+```
+
+Then apply and fill in the tokens for agents that are already running:
+
+```sh
+herdr server reload-config
+herdr plugin action invoke gregsantos.agent-kind.refresh
+```
+
+Claude agents show the session name you pass with `claude -n <name>`; Codex
+agents show the name you pass to `herdr agent start <name>`.
 
 ## Update
 
