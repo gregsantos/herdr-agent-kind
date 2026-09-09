@@ -117,7 +117,7 @@ rows = [
     { equals = "claude", fg = "#fab387", dim = false },
     { equals = "codex", fg = "#74c7ec", dim = false },
   ] }],
-  [{ token = "terminal_title_stripped", bold = true }],
+  [{ token = "agent", bold = true }],
   [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
 ]
 ```
@@ -128,16 +128,29 @@ Match values against Herdr's canonical ids, which are lowercase and which
 `herdr server agent-manifests` will list — `claude`, `codex`, `gemini`, `pi`,
 `copilot` and so on. `equals` is case-sensitive.
 
-### Agents without a session name
+### Which name to show
 
-The layouts above show `terminal_title_stripped`, which is the agent's own
-terminal title. Claude sets it to the session name you pass with `claude -n`,
-so a Claude row reads as a role. Codex has no such flag and titles its terminal
-after the working directory, so a Codex agent you named `test-runner` with
-`herdr agent start` still shows the folder name.
+Two tokens can carry an agent's name, and they are not the same thing.
 
-Herdr's `rows_by_agent` table replaces the rows for one kind. Show the Herdr
-agent handle for Codex and leave the other kinds alone:
+`agent` is the Herdr handle: the name you pass to `herdr agent start <name>`,
+and the name every `herdr agent` command targets. It behaves the same for every
+kind. An agent you started by hand has none until you give it one, which takes
+one command and works from inside the pane too:
+
+```sh
+herdr agent rename "$HERDR_PANE_ID" orchestrator
+```
+
+`terminal_title_stripped` is whatever the agent itself puts in the terminal
+title. Claude sets it to the session name from `claude -n <name>`, so a Claude
+row reads as a role. Codex has no such flag and titles its terminal after the
+working directory, so a Codex agent you named `test-runner` shows the folder
+name. Other kinds vary.
+
+The layouts here show `agent`, so the name you read is the name you type, and
+Codex needs no special case. If you prefer the title, Herdr's `rows_by_agent`
+table can swap the middle row for one kind. This shows the handle for Codex
+alone and leaves the others on their titles. Verified on Herdr 0.9.0:
 
 ```toml
 [ui.sidebar.agents.rows_by_agent]
@@ -147,10 +160,6 @@ codex = [
   [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
 ]
 ```
-
-The first and third rows repeat the default so the list stays uniform; only the
-middle row differs. Verified on Herdr 0.9.0. Run `herdr server reload-config`
-after adding it, as with any rows change.
 
 ### The complete layout
 
@@ -168,15 +177,7 @@ rows = [
     { equals = "claude", fg = "#fab387", dim = false },
     { equals = "codex", fg = "#74c7ec", dim = false },
   ] }],
-  [{ token = "terminal_title_stripped", fg = "#89b4fa", bold = true }],
-  [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
-]
-
-# Codex titles its terminal after the working directory, so show its Herdr
-# agent handle in the middle row instead.
-[ui.sidebar.agents.rows_by_agent]
-codex = [
-  ["state_icon", "state_text", { token = "$agent_kind", fg = "#74c7ec" }],
+  # The Herdr agent handle: the name you target with `herdr agent ...`.
   [{ token = "agent", fg = "#89b4fa", bold = true }],
   [{ token = "workspace", dim = true }, { token = "tab", dim = true }],
 ]
@@ -189,8 +190,9 @@ herdr server reload-config
 herdr plugin action invoke gregsantos.agent-kind.refresh
 ```
 
-Claude agents show the session name you pass with `claude -n <name>`; Codex
-agents show the name you pass to `herdr agent start <name>`.
+Every row shows the name you passed to `herdr agent start <name>`, whatever the
+kind. Pass the same name to Claude as well (`-- -n <name>`) so `claude --resume`
+finds the session by it later.
 
 ## Update
 
