@@ -31,6 +31,15 @@ kind. Either paste this block whole in place of any `[ui.sidebar.agents]`
 section you have, or add the token to the rows you already use, which the next
 section covers. The `rules` need Herdr 0.9.0.
 
+The config is `~/.config/herdr/config.toml`. Herdr writes it on first run with
+every option present as a commented-out default, so you will most likely find a
+`[ui.sidebar.agents]` header already there with `# rows = ...` beneath it.
+Replace that block, header included: TOML allows one `[ui.sidebar.agents]` per
+file, and a second header is an error. If the section is missing, paste the
+block anywhere at top level, outside any other `[section]`. Run
+`herdr config check` before reloading; it prints the same diagnostics the
+reload would.
+
 <a id="the-complete-layout"></a>
 
 ```toml
