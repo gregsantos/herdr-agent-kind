@@ -193,6 +193,16 @@ herdr pane report-metadata w1:p2 --source agent-kind --clear-token agent_kind
   stays green. Enable diagnostics to see publish failures. The one deliberate
   exception is a missing `python3`, which exits non-zero with a message.
 
+## Upstream
+
+This plugin exists because Herdr has no built-in token for the kind, and it
+should become unnecessary. The request for one is Herdr issue
+[#3335](https://github.com/herdrdev/herdr/issues/3335), closed as not planned
+by triage, with product discussion continuing in
+[discussion #3694](https://github.com/herdrdev/herdr/discussions/3694). If you
+want the token native, an upvote there is the way to say so. When Herdr ships
+one, switch your rows to it and uninstall this.
+
 ## License
 
 MIT
