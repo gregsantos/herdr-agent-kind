@@ -3,6 +3,9 @@
 A [Herdr](https://herdr.dev) plugin that publishes each pane's agent kind as an
 `$agent_kind` sidebar token, so you can show an agent's name *and* what it is.
 
+Each agent below shows its session title, its Herdr agent name and, from this
+plugin, its kind:
+
 ```text
  ○ idle
    reviewing auth · reviewer · claude
@@ -31,12 +34,27 @@ If you never name agents, you don't need this: `agent` already shows the kind.
 herdr plugin install gregsantos/herdr-agent-kind
 ```
 
-**Installing alone changes nothing.** The plugin only publishes the value; your
-config decides whether it is rendered.
+A Herdr plugin runs as your user with no sandbox, so it is worth knowing what
+one touches before confirming the install. For this plugin that is two Herdr
+commands, `python3`, and one opt-in log file — [SECURITY.md](SECURITY.md) lists
+all of it and takes two minutes to read.
 
-Edit `~/.config/herdr/config.toml` and add `$agent_kind` to the agent rows under
-`[ui.sidebar.agents]`. Note that `rows` **replaces** the layout entirely rather
-than adding to it, so start from what you already have. Against Herdr's default:
+**Installing alone changes nothing.** The plugin only publishes the value; your
+config decides whether it is rendered. Four steps put it on screen:
+
+1. Install, as above.
+2. Add `$agent_kind` to the agent rows in `~/.config/herdr/config.toml` — see
+   [Add the token to your rows](#add-the-token-to-your-rows).
+3. Run `herdr server reload-config`. Herdr reads the config only at startup and
+   on reload, so editing the file alone changes nothing.
+4. Run `herdr plugin action invoke gregsantos.agent-kind.refresh` to fill in
+   the kind for agents that were already running — see [First run](#first-run).
+
+### Add the token to your rows
+
+Add `$agent_kind` to the agent rows under `[ui.sidebar.agents]`. Note that
+`rows` **replaces** the layout entirely rather than adding to it, so start from
+what you already have. Against Herdr's default:
 
 ```toml
 [ui.sidebar.agents]
@@ -63,6 +81,27 @@ rows = [
 ```
 
 Drop the `agent` token if you'd rather show only the session name and the kind.
+
+Two things to know while editing rows:
+
+- **Row 1 should lead with `state_icon`.** Row 1 renders flush left while later
+  rows indent past the icon gutter, so a first row that starts with anything
+  else leaves the remaining rows hanging.
+- Run `herdr server reload-config` to apply. It reports invalid tokens in its
+  `diagnostics` array, so an empty array means the rows parsed cleanly.
+
+### First run
+
+The plugin publishes when an agent is *detected*, so a fresh install does not
+retrofit itself onto agents that are already running — `$agent_kind` stays empty
+for existing panes until something triggers a publish. Fill them in without
+restarting anything:
+
+```sh
+herdr plugin action invoke gregsantos.agent-kind.refresh
+```
+
+Starting a new agent or restarting the Herdr server has the same effect.
 
 ### Colour each kind differently
 
@@ -95,27 +134,6 @@ Match values against Herdr's canonical ids, which are lowercase and which
 `herdr server agent-manifests` will list — `claude`, `codex`, `gemini`, `pi`,
 `copilot` and so on. `equals` is case-sensitive.
 
-### First run
-
-The plugin publishes when an agent is *detected*, so a fresh install does not
-retrofit itself onto agents that are already running — `$agent_kind` stays empty
-for existing panes until something triggers a publish. Fill them in without
-restarting anything:
-
-```sh
-herdr plugin action invoke gregsantos.agent-kind.refresh
-```
-
-Starting a new agent or restarting the Herdr server has the same effect.
-
-Two things to know while editing rows:
-
-- **Row 1 should lead with `state_icon`.** Row 1 renders flush left while later
-  rows indent past the icon gutter, so a first row that starts with anything
-  else leaves the remaining rows hanging.
-- Run `herdr server reload-config` to apply. It reports invalid tokens in its
-  `diagnostics` array, so an empty array means the rows parsed cleanly.
-
 ## Update
 
 There is no `herdr plugin update` in plugin v1. Reinstalling from GitHub
@@ -146,7 +164,7 @@ herdr plugin list --plugin gregsantos.agent-kind
 To pin a revision instead of following the default branch:
 
 ```sh
-herdr plugin install gregsantos/herdr-agent-kind --ref v0.5.2
+herdr plugin install gregsantos/herdr-agent-kind --ref v0.5.3
 ```
 
 Two cases where an update needs one more step, both flagged in
@@ -202,8 +220,10 @@ touch "$(herdr plugin config-dir gregsantos.agent-kind)/debug"
 ```
 
 Each run then logs the event, its payload, and every publish outcome to
-`$HERDR_PLUGIN_STATE_DIR/agent-kind.log`. For a one-off, set
-`HERDR_AGENT_KIND_DEBUG=1` instead.
+`$HERDR_PLUGIN_STATE_DIR/agent-kind.log`, readable only by you. For a one-off,
+set `HERDR_AGENT_KIND_DEBUG=1` instead. The log goes only to the state
+directory Herdr provides, so running the script by hand outside Herdr never
+writes one.
 
 ```sh
 herdr plugin list --plugin gregsantos.agent-kind

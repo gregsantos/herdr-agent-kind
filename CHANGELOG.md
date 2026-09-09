@@ -8,6 +8,48 @@ Because the plugin's whole job is to publish one sidebar token, entries record
 *why* a change was made — the token's shape and the failure policy are the parts
 that affect anyone's config.
 
+## [0.5.3] - 2026-09-09
+
+Hardening ahead of the repository going public. Nothing here changes what gets
+published for well-formed input, so no `refresh` is needed after updating.
+
+### Security
+
+- Diagnostics no longer fall back to a shared temp directory. With the state
+  directory unset — which only happens when the script is run by hand, since
+  Herdr always provides one — and diagnostics on, the log landed in
+  `/tmp/agent-kind.log`: a predictable name in a world-readable directory, and
+  a file containing your pane layout. Diagnostics now stay off unless
+  `HERDR_PLUGIN_STATE_DIR` is set, which also makes SECURITY.md's "no files
+  outside its own state directory" true in every case.
+- The diagnostics log is created owner-only (mode 0600). It records every event
+  payload, so nobody else on the machine should be able to read it.
+- A kind containing a control or other non-printable character, ASCII or
+  Unicode, is rejected by both parsers, with an ASCII backstop in the shell
+  before the publish. A newline was already rejected; a carriage return, an
+  escape sequence or any other control byte passed through and would have
+  reached the sidebar verbatim. Kinds are Herdr's canonical ids, which never
+  contain one. A kind containing a space is still published intact.
+- CI pins the checkout action to a commit instead of a floating tag, with
+  Dependabot keeping the pin current.
+
+### Fixed
+
+- SECURITY.md dropped the supported-versions table, which went stale on every
+  bump, for a sentence saying only the latest release gets fixes.
+- The `.gitignore` comment claimed a manual run writes its log to the working
+  directory. It never did; it wrote to the temp directory, and now writes
+  nothing.
+- README: the Install section now points at SECURITY.md, so the two-minute
+  review is offered at the moment it matters.
+
+### Added
+
+- Six tests: a carriage return in a listed kind, a Unicode control in a listed
+  kind, an escape sequence in an event kind, a kind with a space still
+  publishing, no log when the state directory is unset, and the log's owner-only
+  mode.
+
 ## [0.5.2] - 2026-09-09
 
 ### Fixed
@@ -141,6 +183,7 @@ that affect anyone's config.
   on `[[startup]]` and on `pane.agent_detected`, so a named agent no longer
   hides whether it is claude or codex.
 
+[0.5.3]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.4.1...v0.5.0

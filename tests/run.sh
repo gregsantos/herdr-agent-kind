@@ -364,6 +364,55 @@ given_two_agents
 run_plugin
 assert_exit 0 && assert_publishes && pass
 
+# A newline is not the only byte that can wreck a sidebar token. A carriage
+# return, an escape sequence or any other control character passes the
+# whitespace guard and would be handed to Herdr verbatim, and how the sidebar
+# renders raw control bytes is not something this plugin controls. Kinds are
+# Herdr's canonical ids, which never contain them, so anything that does is
+# malformed input and is dropped like a malformed pane id.
+begin_case "a kind containing a carriage return in the agent list is skipped"
+HERDR_PLUGIN_EVENT=startup
+given_agent_list <<'JSON'
+{"id":"cli:agent:list","result":{"agents":[
+  {"agent":"claude\r","pane_id":"w1:p1"},
+  {"agent":"codex","pane_id":"w1:p2"}
+],"type":"agent_list"}}
+JSON
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p2 kind=codex" && pass
+
+begin_case "a kind containing an escape sequence in the event yields no pane and falls back to a sweep"
+HERDR_PLUGIN_EVENT=pane.agent_detected
+HERDR_PLUGIN_EVENT_JSON='{"pane_id":"w1:p9","agent":"\u001b[31mclaude"}'
+given_two_agents
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p1 kind=claude" "pane=w1:p2 kind=codex" && pass
+
+# Control characters do not stop at ASCII: JSON can deliver a C1 control such
+# as U+0085 (next line), which an ASCII-only check would let through.
+begin_case "a kind containing a Unicode control character in the agent list is skipped"
+HERDR_PLUGIN_EVENT=startup
+given_agent_list <<'JSON'
+{"id":"cli:agent:list","result":{"agents":[
+  {"agent":"claude\u0085","pane_id":"w1:p1"},
+  {"agent":"codex","pane_id":"w1:p2"}
+],"type":"agent_list"}}
+JSON
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p2 kind=codex" && pass
+
+# A kind may legitimately contain a space and this must keep working; the
+# control-character guard is narrower than a whitespace guard.
+begin_case "a kind containing a space is still published intact"
+HERDR_PLUGIN_EVENT=startup
+given_agent_list <<'JSON'
+{"id":"cli:agent:list","result":{"agents":[
+  {"agent":"claude code","pane_id":"w1:p1"}
+],"type":"agent_list"}}
+JSON
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p1 kind=claude code" && pass
+
 # --- failure handling --------------------------------------------------------
 
 # A publish can fail for reasons the user cannot act on mid-session, so the hook
@@ -418,6 +467,38 @@ given_two_agents
 run_plugin
 assert_exit 0 && { grep -q 'FAILED pane=w1:p1 kind=claude' "$case_dir/state/$debug_log" \
     || fail "expected a FAILED line in the log"; } && pass
+
+# The log holds every event payload, which is the user's pane layout. Herdr
+# always hands hooks a state directory, so a run without one is a manual run
+# from somewhere else, and the only place left to write would be a shared temp
+# directory under a predictable name. Rather than do that, diagnostics stay off.
+begin_case "diagnostics stay off when Herdr provides no state directory"
+HERDR_PLUGIN_EVENT=startup
+HERDR_AGENT_KIND_DEBUG=1
+given_two_agents
+plugin_stderr="$case_dir/stderr"
+plugin_exit=0
+( cd "$plugin_root" && HERDR_PLUGIN_STATE_DIR='' TMPDIR="$case_dir" "$test_shell" "$script_under_test" ) \
+    >"$case_dir/stdout" 2>"$plugin_stderr" || plugin_exit=$?
+assert_exit 0 && assert_publishes "pane=w1:p1 kind=claude" "pane=w1:p2 kind=codex" \
+    && { [ ! -e "$case_dir/$debug_log" ] || fail "diagnostics were written to the temp directory"; } \
+    && { [ ! -e "$plugin_root/$debug_log" ] || fail "diagnostics were written to the plugin root"; } \
+    && pass
+
+# Same reason: the log is the pane layout, so nobody else on the machine gets
+# to read it.
+begin_case "the diagnostics log is readable only by its owner"
+HERDR_PLUGIN_EVENT=startup
+HERDR_AGENT_KIND_DEBUG=1
+given_two_agents
+run_plugin
+# ls rather than stat: the two differ in flags between macOS and GNU, and the
+# path here is one this harness created, so SC2012 does not apply.
+# shellcheck disable=SC2012
+log_mode="$(ls -ld "$case_dir/state/$debug_log" 2>/dev/null | cut -c1-10)"
+assert_exit 0 && assert_debug_log_exists \
+    && { [ "$log_mode" = "-rw-------" ] || fail "expected mode -rw-------, got '$log_mode'"; } \
+    && pass
 
 # --- portability -------------------------------------------------------------
 

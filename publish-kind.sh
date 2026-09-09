@@ -20,18 +20,32 @@ metadata_source="agent-kind"
 # log would mean constant file churn to serve a case that only matters when
 # debugging.
 #   touch "$HERDR_PLUGIN_CONFIG_DIR/debug"   # or export HERDR_AGENT_KIND_DEBUG=1
-debug_log="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}/agent-kind.log"
+#
+# The log records every event payload, which is the user's pane layout, so it
+# goes only where Herdr says plugin state belongs. Herdr always hands hooks a
+# state directory; a run without one is a manual run from somewhere else, and
+# the only alternative would be a shared temp directory under a predictable
+# name. Diagnostics stay off in that case rather than write there.
+debug_log="${HERDR_PLUGIN_STATE_DIR:+${HERDR_PLUGIN_STATE_DIR}/agent-kind.log}"
 debug_enabled=false
-if [ "${HERDR_AGENT_KIND_DEBUG:-}" = "1" ]; then
-    debug_enabled=true
-elif [ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ] && [ -e "${HERDR_PLUGIN_CONFIG_DIR}/debug" ]; then
-    debug_enabled=true
+if [ -n "$debug_log" ]; then
+    if [ "${HERDR_AGENT_KIND_DEBUG:-}" = "1" ]; then
+        debug_enabled=true
+    elif [ -n "${HERDR_PLUGIN_CONFIG_DIR:-}" ] && [ -e "${HERDR_PLUGIN_CONFIG_DIR}/debug" ]; then
+        debug_enabled=true
+    fi
 fi
 
 log_debug() {
     [ "$debug_enabled" = true ] || return 0
-    mkdir -p "$(dirname "$debug_log")" 2>/dev/null || return 0
-    printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >>"$debug_log" 2>/dev/null || true
+    # The log is the only file this script creates; it is owner-only. The umask
+    # is set inside a subshell so the Herdr commands this script runs do not
+    # inherit it.
+    (
+        umask 077
+        mkdir -p "$(dirname "$debug_log")" 2>/dev/null || exit 0
+        printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >>"$debug_log" 2>/dev/null || true
+    )
 }
 
 # Parsing Herdr's JSON is the only thing this needs beyond a shell. Fail loudly
@@ -60,6 +74,17 @@ publish_kind() {
         return 0
         ;;
     esac
+    # The parsers above already drop kinds carrying non-printable characters;
+    # this is an ASCII backstop at the last point before the value leaves the
+    # plugin, so a future parser change cannot quietly reopen it. [[:cntrl:]]
+    # is locale-dependent beyond ASCII, which is why the parsers do the real
+    # check.
+    case "$2" in
+    *[[:cntrl:]]*)
+        log_debug "rejected kind with control characters for pane=$1"
+        return 0
+        ;;
+    esac
     if "$herdr_binary" pane report-metadata "$1" \
         --source "$metadata_source" --token "agent_kind=$2" >/dev/null 2>&1; then
         log_debug "published pane=$1 kind=$2"
@@ -83,14 +108,21 @@ except Exception:
 # id containing whitespace is rejected because this protocol is line-based and
 # whitespace-separated, so the read loop below would truncate the id at its
 # first space and swallow the rest into the kind. A kind may contain spaces; it
-# is the last field, so it survives intact.
+# is the last field, so it survives intact. A kind carrying any non-printable
+# character is rejected: a newline would split it across two lines here, and a
+# carriage return, escape sequence or Unicode control would reach the sidebar
+# verbatim. str.isprintable covers all of those, ASCII and beyond, and still
+# allows a plain space. The canonical ids Herdr generates never contain one.
+def has_control_character(value):
+    return not value.isprintable()
+
 for agent in agents:
     pane_id, kind = agent.get("pane_id"), agent.get("agent")
     if not isinstance(pane_id, str) or not isinstance(kind, str):
         continue
     if not pane_id or not kind:
         continue
-    if any(character.isspace() for character in pane_id) or "\n" in kind:
+    if any(character.isspace() for character in pane_id) or has_control_character(kind):
         continue
     print(pane_id, kind)
 '
@@ -111,6 +143,11 @@ except Exception:
 # Locate any nested object carrying both a pane id and an agent kind, so this
 # survives the payload being wrapped in an envelope. Requiring BOTH keys is what
 # keeps it off sibling objects such as agent_session, which carries "agent" alone.
+# The value guards mirror the sweep path: no whitespace in the pane id, no
+# non-printable characters in the kind.
+def has_control_character(value):
+    return not value.isprintable()
+
 def find_pane(node):
     if isinstance(node, dict):
         pane_id, kind = node.get("pane_id"), node.get("agent")
@@ -120,7 +157,7 @@ def find_pane(node):
             and pane_id
             and kind
             and not any(character.isspace() for character in pane_id)
-            and "\n" not in kind
+            and not has_control_character(kind)
         ):
             return pane_id, kind
         for value in node.values():

@@ -1,6 +1,4 @@
-# Diagnostics land in HERDR_PLUGIN_STATE_DIR, not the plugin root, but a manual
-# run with HERDR_PLUGIN_STATE_DIR unset falls back to the working directory.
-*.log
-
-# Test runs work out of mktemp directories, so nothing else here is generated.
+# Diagnostics go only to HERDR_PLUGIN_STATE_DIR and are off when Herdr has not
+# provided one, and test runs work out of mktemp directories, so nothing in this
+# tree is generated.
 .DS_Store
