@@ -66,6 +66,11 @@ Drop the `agent` token if you'd rather show only the session name and the kind.
 
 ### Colour each kind differently
 
+**Requires Herdr 0.9.0.** Token `rules` are not part of 0.8.2, where an inline
+token table accepts only `fg`, `bold` and `dim`. On 0.8.2 give `$agent_kind` a
+single fixed style instead — a `rules` key there buys you nothing at best, and
+a rejected layout at worst.
+
 Text-valued tokens accept up to 16 ordered `rules`, so the kind can carry its
 own colour instead of being one more dim word. Each rule takes exactly one
 condition — `equals`, `contains`, `starts_with`, `gt` or `lt` — plus optional
@@ -242,8 +247,10 @@ herdr pane report-metadata w1:p2 --source agent-kind --clear-token agent_kind
 - When an agent exits and its pane returns to a shell, the pane keeps a stale
   `agent_kind` token. It is never rendered, because the agents sidebar only lists
   panes that currently host an agent.
-- A failed publish is logged, not raised — the hook always exits 0. Enable
-  diagnostics to see failures.
+- A failed publish is logged, not raised, so the hook exits 0 and the plugin log
+  stays green. Enable diagnostics to see publish failures. The one deliberate
+  exception is a missing `python3`, which exits non-zero with a message rather
+  than publishing nothing quietly — see [Requirements](#requirements).
 
 ## License
 

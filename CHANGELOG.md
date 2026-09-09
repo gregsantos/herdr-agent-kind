@@ -8,6 +8,46 @@ Because the plugin's whole job is to publish one sidebar token, entries record
 *why* a change was made — the token's shape and the failure policy are the parts
 that affect anyone's config.
 
+## [Unreleased]
+
+### Fixed
+
+- Malformed pane ids are rejected instead of being handed to Herdr. A pane id is
+  a positional argument to `herdr pane report-metadata` and Herdr's parser does
+  not honour a `--` separator, so a dash-leading id is offered to the option
+  parser first. Verified on Herdr 0.9.0: `--clear-title` and its siblings fall
+  through to the positional and return `pane_not_found`, but `-h` and `--help`
+  short-circuit to the help text and exit 0, which this plugin then logged as a
+  successful publish that never happened. Ids outside `[A-Za-z0-9:_.-]` are now
+  dropped and logged. No effect on real ids, which Herdr generates.
+- The agent-list sweep now requires `pane_id` and `agent` to be non-empty
+  strings, matching the guard the event path already had. A kind arriving as an
+  object was published as its Python repr (`{'kind': 'claude'}`) straight into
+  the sidebar.
+- Pane ids containing whitespace are dropped by both parsers. The helper protocol
+  is line-based and whitespace-separated, so `while read` truncated such an id at
+  its first space — `w1 p1` published against pane `w1` — and a newline split one
+  agent across two output lines. A kind may still contain spaces; it is the last
+  field and survives intact.
+- README: the Limitations section claimed "the hook always exits 0", which
+  contradicted Requirements, CONTRIBUTING and the script itself — a missing
+  `python3` exits non-zero by design.
+- README: the per-kind colour section now states that token `rules` require
+  Herdr 0.9.0. The plugin floor is 0.8.2, where `rules` do not exist, so a
+  0.8.2 user following that section could have had their layout rejected.
+- `tests/run.sh` resolves a bare `TEST_SHELL` name to an absolute path. The
+  documented `TEST_SHELL=bash ./tests/run.sh` failed one case: the missing-python3
+  case empties `PATH`, so a bare shell name could no longer be resolved either
+  and the subshell died with 127 before the plugin ran. CI passes absolute
+  paths, so it could not catch this.
+
+### Added
+
+- Eight tests: option-shaped pane ids on the event and sweep paths, a
+  metacharacter id, a whitespace-bearing id falling back to a sweep, space and
+  tab in a pane id, a newline in a pane id, and a non-string kind in the agent
+  list.
+
 ## [0.5.1] - 2026-09-07
 
 ### Fixed
@@ -101,6 +141,7 @@ that affect anyone's config.
   on `[[startup]]` and on `pane.agent_detected`, so a named agent no longer
   hides whether it is claude or codex.
 
+[Unreleased]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.1...HEAD
 [0.5.1]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.4.0...v0.4.1

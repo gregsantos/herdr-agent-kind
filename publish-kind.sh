@@ -46,6 +46,20 @@ fi
 
 publish_kind() {
     [ -n "${1:-}" ] && [ -n "${2:-}" ] || return 0
+    # The pane id is a positional argument and Herdr's parser does not honour a
+    # `--` separator, so a dash-leading id is offered to the option parser
+    # first. Verified on 0.9.0: `--clear-title` and friends fall through to the
+    # positional and return pane_not_found, but `-h` and `--help` short-circuit
+    # to the help text and exit 0 -- which this script would log as a successful
+    # publish that never happened. Real ids look like w<n>:p<alnum>; the pattern
+    # below also tolerates _ . - so a future id shape stays publishable, and
+    # drops anything else as malformed input rather than passing it on.
+    case "$1" in
+    -* | *[!A-Za-z0-9:_.-]*)
+        log_debug "rejected malformed pane id: $1"
+        return 0
+        ;;
+    esac
     if "$herdr_binary" pane report-metadata "$1" \
         --source "$metadata_source" --token "agent_kind=$2" >/dev/null 2>&1; then
         log_debug "published pane=$1 kind=$2"
@@ -64,10 +78,21 @@ try:
     agents = json.load(sys.stdin)["result"]["agents"]
 except Exception:
     sys.exit(0)
+# Both values must be non-empty strings, exactly as in the event path: a kind
+# arriving as an object would otherwise be published as its Python repr. A pane
+# id containing whitespace is rejected because this protocol is line-based and
+# whitespace-separated, so the read loop below would truncate the id at its
+# first space and swallow the rest into the kind. A kind may contain spaces; it
+# is the last field, so it survives intact.
 for agent in agents:
     pane_id, kind = agent.get("pane_id"), agent.get("agent")
-    if pane_id and kind:
-        print(pane_id, kind)
+    if not isinstance(pane_id, str) or not isinstance(kind, str):
+        continue
+    if not pane_id or not kind:
+        continue
+    if any(character.isspace() for character in pane_id) or "\n" in kind:
+        continue
+    print(pane_id, kind)
 '
 }
 
@@ -89,7 +114,14 @@ except Exception:
 def find_pane(node):
     if isinstance(node, dict):
         pane_id, kind = node.get("pane_id"), node.get("agent")
-        if pane_id and isinstance(kind, str):
+        if (
+            isinstance(pane_id, str)
+            and isinstance(kind, str)
+            and pane_id
+            and kind
+            and not any(character.isspace() for character in pane_id)
+            and "\n" not in kind
+        ):
             return pane_id, kind
         for value in node.values():
             found = find_pane(value)

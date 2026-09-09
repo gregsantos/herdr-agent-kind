@@ -21,7 +21,20 @@ plugin_root="$(cd "$tests_dir/.." && pwd)"
 mock_herdr="$tests_dir/mock-herdr.sh"
 script_under_test="$plugin_root/publish-kind.sh"
 manifest="$plugin_root/herdr-plugin.toml"
+# Resolve to an absolute path up front. The "missing python3" case empties PATH
+# so the plugin cannot find python3; a bare TEST_SHELL name could not be resolved
+# either at that point, and the subshell would die with 127 before the plugin
+# ever ran. CI passes absolute paths, so it cannot catch this.
 test_shell="${TEST_SHELL:-/bin/sh}"
+case "$test_shell" in
+*/*) ;;
+*)
+    test_shell="$(command -v "$test_shell")" || {
+        echo "TEST_SHELL '$TEST_SHELL' not found in PATH" >&2
+        exit 1
+    }
+    ;;
+esac
 
 tests_run=0
 tests_failed=0
@@ -221,6 +234,37 @@ given_two_agents
 run_plugin
 assert_exit 0 && assert_publishes "pane=w1:p1 kind=claude" "pane=w1:p2 kind=codex" && pass
 
+# A pane id is a positional argument to `herdr pane report-metadata`, and Herdr's
+# parser does not honour a `--` separator, so a dash-leading id is offered to the
+# option parser first. On 0.9.0 `--clear-title` and its siblings fall through to
+# the positional and return pane_not_found, but `-h` and `--help` short-circuit
+# to the help text and exit 0 -- which the plugin would log as a successful
+# publish that never happened. Real ids never look like this.
+begin_case "a pane id that looks like an option is rejected, not published"
+HERDR_PLUGIN_EVENT=pane.agent_detected
+HERDR_PLUGIN_EVENT_JSON='{"pane_id":"--help","agent":"claude"}'
+given_two_agents
+run_plugin
+assert_exit 0 && assert_publishes && pass
+
+# No whitespace here, so this reaches the allowlist rather than being dropped by
+# the whitespace guard in the parser -- it is the charset that rejects it.
+begin_case "a pane id with shell metacharacters is rejected, not published"
+HERDR_PLUGIN_EVENT=pane.agent_detected
+HERDR_PLUGIN_EVENT_JSON='{"pane_id":"w1:p1;rm","agent":"claude"}'
+given_two_agents
+run_plugin
+assert_exit 0 && assert_publishes && pass
+
+# With whitespace, the parser drops it before the shell ever sees it, so the
+# event yields no pane and the fallback sweep reconciles from `agent list`.
+begin_case "a whitespace-bearing pane id yields no pane and falls back to a sweep"
+HERDR_PLUGIN_EVENT=pane.agent_detected
+HERDR_PLUGIN_EVENT_JSON='{"pane_id":"w1:p1;rm -rf /","agent":"claude"}'
+given_two_agents
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p1 kind=claude" "pane=w1:p2 kind=codex" && pass
+
 # --- agent list shapes -------------------------------------------------------
 
 begin_case "agents missing a pane or a kind are skipped, not published blank"
@@ -235,6 +279,67 @@ given_agent_list <<'JSON'
 JSON
 run_plugin
 assert_exit 0 && assert_publishes "pane=w1:p1 kind=claude" && pass
+
+# The sweep path parses the same key names as the event path and must reject the
+# same shapes. Without a type guard a kind arriving as an object is published as
+# its Python repr, which would land verbatim in the sidebar.
+begin_case "a non-string kind in the agent list is skipped, not published as a repr"
+HERDR_PLUGIN_EVENT=startup
+given_agent_list <<'JSON'
+{"id":"cli:agent:list","result":{"agents":[
+  {"agent":{"kind":"claude"},"pane_id":"w1:p1"},
+  {"agent":"codex","pane_id":7},
+  {"agent":"codex","pane_id":"w1:p2"}
+],"type":"agent_list"}}
+JSON
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p2 kind=codex" && pass
+
+# Python prints a pane id containing a newline as two lines, so `while read`
+# would consume the first half with an empty kind and then publish the second
+# half against a truncated id.
+begin_case "a pane id containing a newline is skipped, not split across two publishes"
+HERDR_PLUGIN_EVENT=startup
+given_agent_list <<'JSON'
+{"id":"cli:agent:list","result":{"agents":[
+  {"agent":"claude","pane_id":"w1\n:p1"},
+  {"agent":"codex","pane_id":"w1:p2"}
+],"type":"agent_list"}}
+JSON
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p2 kind=codex" && pass
+
+# A space or tab in a pane id is the same hazard as a newline: `while read`
+# treats it as the field separator, so the id is truncated to its first word --
+# which passes the allowlist -- and the rest is swallowed into the kind.
+begin_case "a pane id containing a space is skipped, not truncated to its first word"
+HERDR_PLUGIN_EVENT=startup
+given_agent_list <<'JSON'
+{"id":"cli:agent:list","result":{"agents":[
+  {"agent":"claude","pane_id":"w1 p1"},
+  {"agent":"codex","pane_id":"w1:p2"}
+],"type":"agent_list"}}
+JSON
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p2 kind=codex" && pass
+
+begin_case "a pane id containing a tab is skipped"
+HERDR_PLUGIN_EVENT=pane.agent_detected
+HERDR_PLUGIN_EVENT_JSON='{"pane_id":"w1\tp1","agent":"claude"}'
+given_two_agents
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p1 kind=claude" "pane=w1:p2 kind=codex" && pass
+
+begin_case "an option-shaped pane id in the agent list is skipped"
+HERDR_PLUGIN_EVENT=startup
+given_agent_list <<'JSON'
+{"id":"cli:agent:list","result":{"agents":[
+  {"agent":"codex","pane_id":"--clear-title"},
+  {"agent":"codex","pane_id":"w1:p2"}
+],"type":"agent_list"}}
+JSON
+run_plugin
+assert_exit 0 && assert_publishes "pane=w1:p2 kind=codex" && pass
 
 begin_case "an unparseable agent list publishes nothing and still exits 0"
 HERDR_PLUGIN_EVENT=startup
