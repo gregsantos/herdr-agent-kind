@@ -8,7 +8,7 @@ Because the plugin's whole job is to publish one sidebar token, entries record
 *why* a change was made — the token's shape and the failure policy are the parts
 that affect anyone's config.
 
-## [Unreleased]
+## [0.5.3] - 2026-09-09
 
 Hardening ahead of the repository going public. Nothing here changes what gets
 published for well-formed input, so no `refresh` is needed after updating.
@@ -183,7 +183,7 @@ published for well-formed input, so no `refresh` is needed after updating.
   on `[[startup]]` and on `pane.agent_detected`, so a named agent no longer
   hides whether it is claude or codex.
 
-[Unreleased]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.2...HEAD
+[0.5.3]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/gregsantos/herdr-agent-kind/compare/v0.4.1...v0.5.0
